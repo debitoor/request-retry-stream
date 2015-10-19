@@ -5,7 +5,6 @@ var app = express();
 var responses = [];
 var rrs = require('..');
 
-// respond with "hello world" when a GET request is made to the homepage
 app.get('/', function (req, res, next) {
 	if (!responses.length) {
 		throw new Error('no responses specified for test');
