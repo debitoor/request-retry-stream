@@ -6,11 +6,14 @@ var responses = [];
 var rrs = require('..');
 
 // respond with "hello world" when a GET request is made to the homepage
-app.get('/', function (req, res) {
+app.get('/', function (req, res, next) {
 	if (!responses.length) {
 		throw new Error('no responses specified for test');
 	}
 	var responseToSend = responses.shift();
+	if (responseToSend.timeout) {
+		return null;
+	}
 	res.statusCode = responseToSend.statusCode;
 	var buf = new Buffer(responseToSend.msg, 'utf-8');
 	return sendByte();
@@ -42,7 +45,7 @@ var result;
 function get(r, callback) {
 	responses = r;
 	result = {};
-	var stream = rrs.get('http://localhost:4300');
+	var stream = rrs.get('http://localhost:4300', {timeout: 500});
 	stream.on('response', function (resp) {
 		result.statusCode = resp.statusCode;
 	});
@@ -135,6 +138,14 @@ describe('returning 503 then 400', function () {
 			},
 			statusCode: 400
 		});
+	});
+});
+
+describe('timing out then 200', function () {
+	before(done => get([{timeout: true}, {statusCode: 200, msg: 'success'}], done));
+
+	it('calls with success', ()=> {
+		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
 	});
 });
 
