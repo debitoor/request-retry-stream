@@ -29,6 +29,9 @@ function verbFunc(verb) {
 		if (!params.timeout) {
 			throw new Error('request-retry-stream you have to specify a timeout');
 		}
+		if(params.method !== 'GET'){
+			throw new Error('request-retry-stream only supports GETs for now. PRs are welcome if you want to add support for other verbs');
+		}
 		makeRequest();
 		return stream;
 
@@ -50,17 +53,12 @@ function verbFunc(verb) {
 					return pump(potentialStream, concatStream, cb);
 				}
 				//all good
-				return pump(potentialStream, stream, function (err) {
-					if (err) {
-						stream.destroy(err);
-					}
-				});
+				return pump(potentialStream, stream);
 
 				function returnError(bodyBufferOrError) {
 					err = err || new Error('Error in request ' + ((err && err.message) || (resp && resp.statusCode)));
 					err.statusCode = (resp && resp.statusCode);
 					Object.assign(err, params);
-					delete err.callback;
 					err.attemptsDone = attempts;
 					if (util.isError(bodyBufferOrError)) {
 						err.streamError = bodyBufferOrError;
