@@ -10,7 +10,7 @@ app.get('/', function (req, res) {
 	if (!responses.length) {
 		throw new Error('no responses specified for test');
 	}
-	var responseToSend = responses.pop();
+	var responseToSend = responses.shift();
 	res.statusCode = responseToSend.statusCode;
 	var buf = new Buffer(responseToSend.msg, 'utf-8');
 	return sendByte();
@@ -111,6 +111,23 @@ describe('returning 400', function () {
 		expect(result).to.containSubset({
 			err: {
 				attemptsDone: 1,
+				body: 'err',
+				method: 'GET',
+				statusCode: 400,
+				uri: 'http://localhost:4300'
+			},
+			statusCode: 400
+		});
+	});
+});
+
+describe('returning 503 then 400', function () {
+	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 400, msg: 'err'}], done));
+
+	it('calls with err', ()=> {
+		expect(result).to.containSubset({
+			err: {
+				attemptsDone: 2,
 				body: 'err',
 				method: 'GET',
 				statusCode: 400,

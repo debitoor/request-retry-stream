@@ -33,7 +33,6 @@ function verbFunc(verb) {
 			var handler = once(function(err, resp){
 				if (shouldRetry(err, resp) && attempts < maxAttempts) {
 					potentialStream.destroy(err);
-					console.log('retrying');
 					return setTimeout(makeRequest, attempts * delay);
 				}
 				if(resp){
