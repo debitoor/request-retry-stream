@@ -63,7 +63,7 @@ function verbFunc(verb) {
 					if (util.isError(bodyBufferOrError)) {
 						err.streamError = bodyBufferOrError;
 					} else {
-						err.body = bodyBufferOrError.toString();
+						err.body = bodyBufferOrError.slice(0, 1500).toString(); //max 1500 bytes
 					}
 					stream.destroy(err);
 				}
