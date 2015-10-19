@@ -104,3 +104,20 @@ describe('returning 503, 503 and 503', function () {
 	});
 });
 
+describe('returning 400', function () {
+	before(done => get([{statusCode: 400, msg: 'err'}], done));
+
+	it('calls with err', ()=> {
+		expect(result).to.containSubset({
+			err: {
+				attemptsDone: 1,
+				body: 'err',
+				method: 'GET',
+				statusCode: 400,
+				uri: 'http://localhost:4300'
+			},
+			statusCode: 400
+		});
+	});
+});
+
