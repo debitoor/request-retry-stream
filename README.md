@@ -12,7 +12,7 @@ var rrs = require('request-retry-stream');
 var pump = require('pump');
 
 function(req, res, next){
-	pump(rrs.get('http://google.com'), res, next);
+	pump(rrs.get('http://google.com'), {timeout: 5000}, res, next);
 }
 
 ```
@@ -26,7 +26,8 @@ function(req, res, next){
 	var stream = rrs.get({
 			url: 'http://google.com'
 			attempts: 3, //default
-			delay: 500 //default
+			delay: 500, //default
+			timeout: 2000
 		});	
 	pump(stream, res, next);
 }
