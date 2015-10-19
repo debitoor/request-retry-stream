@@ -15,8 +15,7 @@ module.exports.del = verbFunc('del');
 
 function verbFunc(verb) {
 	return function () {
-		var args = arguments;
-		var params = request.initParams.apply(request, args);
+		var params = request.initParams.apply(request, arguments);
 		if (verb) {
 			params.method = verb === 'del' ? 'DELETE' : verb.toUpperCase();
 		}
@@ -24,18 +23,21 @@ function verbFunc(verb) {
 		var delay = params.delay || 500;
 		var attempts = 0;
 		var stream = through2();
+		if (params.callback) {
+			throw new Error('request-retry-stream does not support callbacks only streaming. PRs are welcome if you want to add support for callbacks');
+		}
 		makeRequest();
 		return stream;
 
 		function makeRequest() {
 			attempts++;
 			var potentialStream = through2();
-			var handler = once(function(err, resp){
+			var handler = once(function (err, resp) {
 				if (shouldRetry(err, resp) && attempts < maxAttempts) {
-					potentialStream.destroy(err);
+					potentialStream.destroy(err || new Error('request-retry-stream is retrying this request'));
 					return setTimeout(makeRequest, attempts * delay);
 				}
-				if(resp){
+				if (resp) {
 					stream.emit('response', resp);
 				}
 				if (err || !/2\d\d/.test(resp && resp.statusCode)) {
@@ -45,7 +47,11 @@ function verbFunc(verb) {
 					return pump(potentialStream, concatStream, cb);
 				}
 				//all good
-				return pump(potentialStream, stream);
+				return pump(potentialStream, stream, function (err) {
+					if (err) {
+						stream.destroy(err);
+					}
+				});
 
 				function returnError(bodyBufferOrError) {
 					err = err || new Error('Error in request ' + ((err && err.message) || (resp && resp.statusCode)));
