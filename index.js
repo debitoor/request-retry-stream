@@ -26,6 +26,9 @@ function verbFunc(verb) {
 		if (params.callback) {
 			throw new Error('request-retry-stream does not support callbacks only streaming. PRs are welcome if you want to add support for callbacks');
 		}
+		if (!params.timeout) {
+			throw new Error('request-retry-stream you have to specify a timeout');
+		}
 		makeRequest();
 		return stream;
 
