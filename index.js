@@ -37,7 +37,7 @@ function verbFunc(verb) {
 		var destination = null;
 		stream.pipe = function(dest){
 			destination = dest;
-			originalPipe.apply(stream, arguments);
+			return originalPipe.apply(stream, arguments);
 		};
 		return stream;
 
