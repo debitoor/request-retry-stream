@@ -29,23 +29,29 @@ function verbFunc(verb) {
 		if (!params.timeout) {
 			throw new Error('request-retry-stream you have to specify a timeout');
 		}
-		if(params.method !== 'GET'){
+		if (params.method !== 'GET') {
 			throw new Error('request-retry-stream only supports GETs for now. PRs are welcome if you want to add support for other verbs');
 		}
 		makeRequest();
+		var originalPipe = stream.pipe;
+		var destination = null;
+		stream.pipe = function(dest){
+			destination = dest;
+			originalPipe.apply(stream, arguments);
+		};
 		return stream;
 
 		function makeRequest() {
 			attempts++;
 			var potentialStream = through2();
+			var done = false;
 			var handler = once(function (err, resp) {
 				if (shouldRetry(err, resp) && attempts < maxAttempts) {
 					potentialStream.destroy(err || new Error('request-retry-stream is retrying this request'));
 					return setTimeout(makeRequest, attempts * delay);
 				}
-				if (resp) {
-					stream.emit('response', resp);
-				}
+				done = true;
+				stream.emit('response', resp);
 				if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 					//unrecoverable error
 					var cb = once(returnError);
@@ -69,6 +75,11 @@ function verbFunc(verb) {
 				}
 			});
 			var req = request(params);
+			req.pipefilter = function(resp){
+				if(done && destination && stream.pipefilter){
+					stream.pipefilter(resp, destination);
+				}
+			};
 			req.on('response', function (resp) {
 				handler(null, resp);
 			});

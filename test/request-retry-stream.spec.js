@@ -55,8 +55,9 @@ function get(r, callback) {
 		if (err) {
 			result.err = Object.assign({stack: err.stack}, err);
 		}
-		callback();
+		callback && callback();
 	});
+	return {req: stream, dest: concatStream};
 }
 
 describe('returning success', function () {
@@ -143,6 +144,24 @@ describe('returning 503 then 400', function () {
 describe('timing out then 200', function () {
 	before(done => get([{timeout: true}, {statusCode: 200, msg: 'success'}], done));
 
+	it('calls with success', ()=> {
+		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
+	});
+});
+
+describe('pipefilter', function () {
+	var req, dest;
+	before(done => {
+		req = get([{statusCode: 200, msg: 'success'}]);
+		req.req.pipefilter = function (r, d) {
+			dest = d;
+			done();
+		};
+	});
+
+	it('calls pipefilter with correct dest', ()=> {
+		expect(dest).to.eql(req.dest);
+	});
 	it('calls with success', ()=> {
 		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
 	});
