@@ -4,7 +4,8 @@
   "description": "Request wrapper with retries, focused on streaming",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "istanbul cover _mocha",
+    "coveralls": "cat ./coverage/lcov.info | coveralls"
   },
   "repository": {
     "type": "git",
@@ -18,7 +19,9 @@
   "devDependencies": {
     "chai": "^3.3.0",
     "chai-subset": "^1.1.0",
+    "coveralls": "^2.11.6",
     "express": "^4.13.3",
+    "istanbul": "^0.4.2",
     "jscs": "^2.3.2",
     "mocha": "^2.1.1",
     "mocha-eslint": "^1.0.0",
