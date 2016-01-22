@@ -44,7 +44,10 @@ var result;
 function get(r, callback) {
 	responses = r;
 	result = {};
-	var stream = rrs.get('http://localhost:4300', {timeout: 500});
+	var stream = rrs.get('http://localhost:4300', {
+		timeout: 500,
+		logFunction: console.warn
+	});
 	stream.on('response', function (resp) {
 		result.statusCode = resp.statusCode;
 	});

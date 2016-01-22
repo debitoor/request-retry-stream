@@ -3,6 +3,6 @@
   "esnext": true,
   "validateIndentation": "\t",
   "excludeFiles": [
-    "node_modules"
+    "node_modules", "coverage"
   ]
 }

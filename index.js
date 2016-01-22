@@ -21,6 +21,7 @@ function verbFunc(verb) {
 		}
 		var maxAttempts = params.attempts || 3;
 		var delay = params.delay || 500;
+		var logFunction = params.logFunction || function() {};
 		var attempts = 0;
 		var stream = through2();
 		if (params.callback) {
@@ -48,6 +49,7 @@ function verbFunc(verb) {
 			var handler = once(function (err, resp) {
 				if (shouldRetry(err, resp) && attempts < maxAttempts) {
 					potentialStream.destroy(err || new Error('request-retry-stream is retrying this request'));
+					logFunction(err || 'request-retry-stream is retrying to perform request');
 					return setTimeout(makeRequest, attempts * delay);
 				}
 				done = true;
