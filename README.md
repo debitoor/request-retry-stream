@@ -27,10 +27,10 @@ var pump = require('pump');
 
 function(req, res, next){
 	var stream = rrs.get({
-			url: 'http://google.com'
+			url: 'http://google.com',
 			attempts: 3, //default
 			delay: 500, //default
-			timeout: 2000
+			timeout: 2000,
 			logFunction: console.warn // optional, if you want to be notified about retry
 		});	
 	pump(stream, res, next);
