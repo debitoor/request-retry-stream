@@ -53,7 +53,9 @@ function verbFunc(verb) {
 					return setTimeout(makeRequest, attempts * delay);
 				}
 				done = true;
-				stream.emit('response', resp);
+				if(!err){
+					stream.emit('response', resp);
+				}
 				if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 					//unrecoverable error
 					var cb = once(returnError);
