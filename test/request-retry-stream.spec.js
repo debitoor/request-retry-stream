@@ -6,6 +6,7 @@ var app = express();
 var responses = [];
 var rrs = require('..');
 
+app.disable('x-powered-by');
 app.get('/test', function (req, res, next) {
 	if (!responses.length) {
 		throw new Error('no responses specified for test');
@@ -28,7 +29,7 @@ app.get('/test', function (req, res, next) {
 	}
 });
 
-app.get('/api/multifetch', multifetch());
+app.get('/multifetch', multifetch());
 
 
 app.use(function (err, req, res, next) {
@@ -46,7 +47,7 @@ var server = app.listen(4300, function () {
 
 var result;
 function get(r, optionalOptions, callback) {
-	if(typeof optionalOptions === 'function'){
+	if (typeof optionalOptions === 'function') {
 		callback = optionalOptions;
 		optionalOptions = {};
 	}
@@ -54,7 +55,7 @@ function get(r, optionalOptions, callback) {
 	responses = r;
 	result = {};
 	var url = 'http://localhost:4300/test';
-	if(optionalOptions.multifetch){
+	if (optionalOptions.multifetch) {
 		url = 'http://localhost:4300/multifetch?test=/test';
 	}
 	var stream = rrs.get({
@@ -66,7 +67,7 @@ function get(r, optionalOptions, callback) {
 		result.statusCode = resp.statusCode;
 	});
 	var concatStream = concat(function (body) {
-		result.body = body.toString();
+		result.body = optionalOptions.multifetch ? JSON.parse(body.toString()) : body.toString();
 	});
 	pump(stream, concatStream, function (err) {
 		if (err) {
@@ -82,6 +83,22 @@ describe('returning success', function () {
 
 	it('calls with success', ()=> {
 		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
+	});
+});
+
+describe('returning success with multifetch', function () {
+	before(done => get([{statusCode: 200, msg: 'success'}], {multifetch: true}, done));
+
+	it('calls with success', ()=> {
+		expect(result).to.containSubset({
+			body: {
+				test: {
+					body: 'success',
+					statusCode: 200
+				}
+			},
+			statusCode: 200
+		});
 	});
 });
 
