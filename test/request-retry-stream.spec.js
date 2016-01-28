@@ -1,11 +1,12 @@
 var express = require('express');
 var concat = require('concat-stream');
+var multifetch = require('multifetch');
 var pump = require('pump');
 var app = express();
 var responses = [];
 var rrs = require('..');
 
-app.get('/', function (req, res, next) {
+app.get('/test', function (req, res, next) {
 	if (!responses.length) {
 		throw new Error('no responses specified for test');
 	}
@@ -27,6 +28,9 @@ app.get('/', function (req, res, next) {
 	}
 });
 
+app.get('/api/multifetch', multifetch());
+
+
 app.use(function (err, req, res, next) {
 	var e = Object.assign(err);
 	e.stack = err.stack;
@@ -41,10 +45,20 @@ var server = app.listen(4300, function () {
 });
 
 var result;
-function get(r, callback) {
+function get(r, optionalOptions, callback) {
+	if(typeof optionalOptions === 'function'){
+		callback = optionalOptions;
+		optionalOptions = {};
+	}
+	optionalOptions = optionalOptions || {};
 	responses = r;
 	result = {};
-	var stream = rrs.get('http://localhost:4300', {
+	var url = 'http://localhost:4300/test';
+	if(optionalOptions.multifetch){
+		url = 'http://localhost:4300/multifetch?test=/test';
+	}
+	var stream = rrs.get({
+		url,
 		timeout: 500,
 		logFunction: console.warn
 	});
@@ -103,7 +117,7 @@ describe('returning 503, 503 and 503', function () {
 				body: 'err',
 				method: 'GET',
 				statusCode: 503,
-				uri: 'http://localhost:4300'
+				url: 'http://localhost:4300/test'
 			},
 			statusCode: 503
 		});
@@ -120,7 +134,7 @@ describe('returning 400', function () {
 				body: 'err',
 				method: 'GET',
 				statusCode: 400,
-				uri: 'http://localhost:4300'
+				url: 'http://localhost:4300/test'
 			},
 			statusCode: 400
 		});
@@ -137,7 +151,7 @@ describe('returning 503 then 400', function () {
 				body: 'err',
 				method: 'GET',
 				statusCode: 400,
-				uri: 'http://localhost:4300'
+				url: 'http://localhost:4300/test'
 			},
 			statusCode: 400
 		});
