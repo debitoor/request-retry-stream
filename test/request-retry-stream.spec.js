@@ -16,7 +16,6 @@ app.get('/test', function (req, res, next) {
 	if (responseToSend.timeout) {
 		return null;
 	}
-	console.error('sending', responseToSend.msg);
 	var buf = new Buffer(responseToSend.msg, 'utf-8');
 	res.writeHeader(responseToSend.statusCode, {'content-type': 'application/json', 'content-length':buf.length});
 	return sendByte();
@@ -111,14 +110,14 @@ describe('returning success', function () {
 
 	it('calls with success', ()=> {
 		expect(result).to.containSubset({
-			body: '"success"',
+			body: 'success',
 			statusCode: 200,
 			headers: {'content-type': 'application/json'}
 		});
 	});
 });
 
-describe.only('returning success with multifetch', function () {
+describe('returning success with multifetch', function () {
 	var requestResult, rrsResult;
 	before(done => get([{statusCode: 200, msg: '"success"'}], {multifetch: true}, done));
 	before(()=> rrsResult = result.body.rrs);
@@ -137,7 +136,7 @@ describe('returning 503 and then success', function () {
 	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 200, msg: '"success"'}], done));
 
 	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: '"success"', 'statusCode': 200});
+		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
 	});
 });
 
@@ -148,7 +147,7 @@ describe('returning 503, 503 and then success', function () {
 	}], done));
 
 	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: '"success"', 'statusCode': 200});
+		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
 	});
 });
 
@@ -210,7 +209,7 @@ describe('timing out then 200', function () {
 	before(done => get([{timeout: true}, {statusCode: 200, msg: '"success"'}], done));
 
 	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: '"success"', 'statusCode': 200});
+		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
 	});
 });
 
@@ -228,7 +227,7 @@ describe('pipefilter', function () {
 		expect(dest).to.eql(req.dest);
 	});
 	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: '"success"', 'statusCode': 200});
+		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
 	});
 });
 

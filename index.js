@@ -1,20 +1,9 @@
 var request = require('request');
-var stream = require('stream');
 var concat = require('concat-stream');
 var util = require('util');
 var once = require('once');
 var pump = require('pump');
-
-var ProxyStream = function () {
-	stream.PassThrough.call(this);
-	this._headers = {};
-};
-
-util.inherits(ProxyStream, stream.PassThrough);
-
-ProxyStream.prototype.setHeader = function (name, value) {
-	this._headers[name] = value;
-};
+var ProxyStream = require('./ProxyStream');
 
 module.exports = verbFunc();
 module.exports.get = verbFunc('get');
@@ -32,7 +21,8 @@ function verbFunc(verb) {
 		}
 		var maxAttempts = params.attempts || 3;
 		var delay = params.delay || 500;
-		var logFunction = params.logFunction || function() {};
+		var logFunction = params.logFunction || function () {
+			};
 		var attempts = 0;
 		var stream = new ProxyStream();
 		if (params.callback) {
@@ -47,7 +37,7 @@ function verbFunc(verb) {
 		makeRequest();
 		var originalPipe = stream.pipe;
 		var destination = null;
-		stream.pipe = function(dest){
+		stream.pipe = function (dest) {
 			destination = dest;
 			return originalPipe.apply(stream, arguments);
 		};
@@ -64,8 +54,8 @@ function verbFunc(verb) {
 					return setTimeout(makeRequest, attempts * delay);
 				}
 				done = true;
-				if(!err){
-					Object.keys(resp.headers).forEach(function(key){
+				if (!err) {
+					Object.keys(resp.headers).forEach(function (key) {
 						stream.setHeader(key, resp.headers[key]);
 					});
 					stream.statusCode = resp.statusCode;
@@ -94,9 +84,9 @@ function verbFunc(verb) {
 				}
 			});
 			var req = request(params);
-			req.pipefilter = function(resp, proxy){
-				if(done && destination){
-					if(stream.pipefilter) {
+			req.pipefilter = function (resp, proxy) {
+				if (done && destination) {
+					if (stream.pipefilter) {
 						stream.pipefilter(resp, destination);
 					} else {
 						for (var i in proxy._headers) {
