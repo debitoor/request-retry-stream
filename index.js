@@ -1,9 +1,20 @@
 var request = require('request');
-var through2 = require('through2');
+var stream = require('stream');
 var concat = require('concat-stream');
 var util = require('util');
 var once = require('once');
 var pump = require('pump');
+
+var ProxyStream = function () {
+	stream.PassThrough.call(this);
+	this._headers = {};
+};
+
+util.inherits(ProxyStream, stream.PassThrough);
+
+ProxyStream.prototype.setHeader = function (name, value) {
+	this._headers[name] = value;
+};
 
 module.exports = verbFunc();
 module.exports.get = verbFunc('get');
@@ -23,7 +34,7 @@ function verbFunc(verb) {
 		var delay = params.delay || 500;
 		var logFunction = params.logFunction || function() {};
 		var attempts = 0;
-		var stream = through2();
+		var stream = new ProxyStream();
 		if (params.callback) {
 			throw new Error('request-retry-stream does not support callbacks only streaming. PRs are welcome if you want to add support for callbacks');
 		}
@@ -44,7 +55,7 @@ function verbFunc(verb) {
 
 		function makeRequest() {
 			attempts++;
-			var potentialStream = through2();
+			var potentialStream = new ProxyStream();
 			var done = false;
 			var handler = once(function (err, resp) {
 				if (shouldRetry(err, resp) && attempts < maxAttempts) {
@@ -54,6 +65,10 @@ function verbFunc(verb) {
 				}
 				done = true;
 				if(!err){
+					Object.keys(resp.headers).forEach(function(key){
+						stream.setHeader(key, resp.headers[key]);
+					});
+					stream.statusCode = resp.statusCode;
 					stream.emit('response', resp);
 				}
 				if (err || !/2\d\d/.test(resp && resp.statusCode)) {
@@ -79,9 +94,15 @@ function verbFunc(verb) {
 				}
 			});
 			var req = request(params);
-			req.pipefilter = function(resp){
-				if(done && destination && stream.pipefilter){
-					stream.pipefilter(resp, destination);
+			req.pipefilter = function(resp, proxy){
+				if(done && destination){
+					if(stream.pipefilter) {
+						stream.pipefilter(resp, destination);
+					} else {
+						for (var i in proxy._headers) {
+							destination.setHeader && destination.setHeader(i, proxy._headers[i]);
+						}
+					}
 				}
 			};
 			req.on('response', function (resp) {

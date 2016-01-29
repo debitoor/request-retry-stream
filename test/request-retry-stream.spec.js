@@ -1,6 +1,7 @@
 var express = require('express');
 var concat = require('concat-stream');
 var multifetch = require('multifetch');
+var request = require('request');
 var pump = require('pump');
 var app = express();
 var responses = [];
@@ -15,8 +16,9 @@ app.get('/test', function (req, res, next) {
 	if (responseToSend.timeout) {
 		return null;
 	}
-	res.statusCode = responseToSend.statusCode;
+	console.error('sending', responseToSend.msg);
 	var buf = new Buffer(responseToSend.msg, 'utf-8');
+	res.writeHeader(responseToSend.statusCode, {'content-type': 'application/json', 'content-length':buf.length});
 	return sendByte();
 
 	function sendByte() {
@@ -27,6 +29,26 @@ app.get('/test', function (req, res, next) {
 		buf = buf.slice(1);
 		process.nextTick(sendByte);
 	}
+});
+
+app.get('/rrs', function (req, res, next) {
+	var stream = rrs.get({
+		url: 'http://localhost:4300/test',
+		attempts: 3, //default
+		delay: 500, //default
+		timeout: 2000,
+		json: true,
+		logFunction: console.warn // optional, if you want to be notified about retry
+	});
+	pump(stream, res, next);
+});
+
+app.get('/request', function (req, res, next) {
+	var stream = request.get({
+		url: 'http://localhost:4300/test',
+		timeout: 2000
+	});
+	pump(stream, res, next);
 });
 
 app.get('/multifetch', multifetch());
@@ -54,20 +76,26 @@ function get(r, optionalOptions, callback) {
 	optionalOptions = optionalOptions || {};
 	responses = r;
 	result = {};
-	var url = 'http://localhost:4300/test';
+	var stream;
 	if (optionalOptions.multifetch) {
-		url = 'http://localhost:4300/multifetch?test=/test';
+		stream = request.get({
+			url: 'http://localhost:4300/multifetch?rrs=/rrs',
+			timeout: 500,
+			logFunction: console.warn
+		});
+	} else {
+		stream = rrs.get({
+			url: 'http://localhost:4300/test',
+			timeout: 500,
+			logFunction: console.warn
+		});
 	}
-	var stream = rrs.get({
-		url,
-		timeout: 500,
-		logFunction: console.warn
-	});
 	stream.on('response', function (resp) {
 		result.statusCode = resp.statusCode;
+		result.headers = resp.headers;
 	});
 	var concatStream = concat(function (body) {
-		result.body = optionalOptions.multifetch ? JSON.parse(body.toString()) : body.toString();
+		result.body = JSON.parse(body.toString());
 	});
 	pump(stream, concatStream, function (err) {
 		if (err) {
@@ -79,45 +107,48 @@ function get(r, optionalOptions, callback) {
 }
 
 describe('returning success', function () {
-	before(done => get([{statusCode: 200, msg: 'success'}], done));
-
-	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
-	});
-});
-
-describe('returning success with multifetch', function () {
-	before(done => get([{statusCode: 200, msg: 'success'}], {multifetch: true}, done));
+	before(done => get([{statusCode: 200, msg: '"success"'}], done));
 
 	it('calls with success', ()=> {
 		expect(result).to.containSubset({
-			body: {
-				test: {
-					body: 'success',
-					statusCode: 200
-				}
-			},
-			statusCode: 200
+			body: '"success"',
+			statusCode: 200,
+			headers: {'content-type': 'application/json'}
 		});
 	});
 });
 
-describe('returning 503 and then success', function () {
-	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 200, msg: 'success'}], done));
+describe.only('returning success with multifetch', function () {
+	var requestResult, rrsResult;
+	before(done => get([{statusCode: 200, msg: '"success"'}], {multifetch: true}, done));
+	before(()=> rrsResult = result.body.rrs);
+
+	before(done => get([{statusCode: 200, msg: '"success"'}], done));
+	before(()=> requestResult = result);
 
 	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
+		delete rrsResult.headers.date;
+		delete requestResult.headers.date;
+		expect(rrsResult).to.eql(requestResult);
+	});
+});
+
+describe('returning 503 and then success', function () {
+	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 200, msg: '"success"'}], done));
+
+	it('calls with success', ()=> {
+		expect(result).to.containSubset({body: '"success"', 'statusCode': 200});
 	});
 });
 
 describe('returning 503, 503 and then success', function () {
 	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 503, msg: 'err'}, {
 		statusCode: 200,
-		msg: 'success'
+		msg: '"success"'
 	}], done));
 
 	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
+		expect(result).to.containSubset({body: '"success"', 'statusCode': 200});
 	});
 });
 
@@ -176,17 +207,17 @@ describe('returning 503 then 400', function () {
 });
 
 describe('timing out then 200', function () {
-	before(done => get([{timeout: true}, {statusCode: 200, msg: 'success'}], done));
+	before(done => get([{timeout: true}, {statusCode: 200, msg: '"success"'}], done));
 
 	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
+		expect(result).to.containSubset({body: '"success"', 'statusCode': 200});
 	});
 });
 
 describe('pipefilter', function () {
 	var req, dest;
 	before(done => {
-		req = get([{statusCode: 200, msg: 'success'}]);
+		req = get([{statusCode: 200, msg: '"success"'}]);
 		req.req.pipefilter = function (r, d) {
 			dest = d;
 			done();
@@ -197,7 +228,7 @@ describe('pipefilter', function () {
 		expect(dest).to.eql(req.dest);
 	});
 	it('calls with success', ()=> {
-		expect(result).to.containSubset({body: 'success', 'statusCode': 200});
+		expect(result).to.containSubset({body: '"success"', 'statusCode': 200});
 	});
 });
 
