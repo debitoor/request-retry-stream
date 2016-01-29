@@ -86,12 +86,11 @@ function verbFunc(verb) {
 			var req = request(params);
 			req.pipefilter = function (resp, proxy) {
 				if (done && destination) {
+					for (var i in proxy._headers) {
+						destination.setHeader && destination.setHeader(i, proxy._headers[i]);
+					}
 					if (stream.pipefilter) {
 						stream.pipefilter(resp, destination);
-					} else {
-						for (var i in proxy._headers) {
-							destination.setHeader && destination.setHeader(i, proxy._headers[i]);
-						}
 					}
 				}
 			};
