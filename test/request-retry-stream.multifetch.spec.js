@@ -9,6 +9,7 @@ var responses = [];
 var rrs = require('..');
 
 app.disable('x-powered-by');
+app.set('etag', false);
 app.get('/test', function (req, res, next) {
 	if (!responses.length) {
 		throw new Error('no responses specified for test');
@@ -18,17 +19,19 @@ app.get('/test', function (req, res, next) {
 		return null;
 	}
 	var buf = new Buffer(responseToSend.msg, 'utf-8');
-	res.writeHeader(responseToSend.statusCode, {'content-type': 'application/json', 'content-length': buf.length});
-	return sendByte();
+	setTimeout(function () {
+		res.writeHeader(responseToSend.statusCode, {'content-type': 'application/json', 'content-length': buf.length});
+		return sendByte();
 
-	function sendByte() {
-		if (!buf.length) {
-			return res.end();
+		function sendByte() {
+			if (!buf.length) {
+				return res.end();
+			}
+			res.write(new Buffer([buf.readUInt8(0)]));
+			buf = buf.slice(1);
+			setTimeout(sendByte, 100);
 		}
-		res.write(new Buffer([buf.readUInt8(0)]));
-		buf = buf.slice(1);
-		process.nextTick(sendByte);
-	}
+	}, 500);
 });
 
 app.get('/rrs', function (req, res, next) {
@@ -42,8 +45,8 @@ app.get('/rrs', function (req, res, next) {
 	});
 	var ps = new ProxyStream();
 	stream.pipefilter = function (response, proxy) {
-		for (var i in proxy._headers) {
-			res.setHeader(i, proxy._headers[i]);
+		for (var i in ps._headers) {
+			res.setHeader(i, ps._headers[i]);
 		}
 	};
 	pump(stream, ps, res, next);
@@ -89,9 +92,9 @@ function get(r, optionalOptions, callback) {
 			timeout: 5000
 		});
 	} else {
-		stream = rrs.get({
+		stream = request.get({
 			url: 'http://localhost:4301/test',
-			timeout: 500,
+			timeout: 5000,
 			logFunction: console.warn
 		});
 	}
@@ -127,12 +130,12 @@ describe('returning success with multifetch', function () {
 });
 
 describe('returning 503 then success with multifetch', function () {
+	this.timeout(6000);
 	var requestResult, rrsResult;
 	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 200, msg: '"success"'}], {multifetch: true}, done));
-	before(()=> console.log(result));
 	before(()=> rrsResult = result.body.rrs);
 
-	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 200, msg: '"success"'}], done));
+	before(done => get([{statusCode: 200, msg: '"success"'}], done));
 	before(()=> requestResult = result);
 
 	it('calls with success', ()=> {
@@ -142,14 +145,43 @@ describe('returning 503 then success with multifetch', function () {
 	});
 });
 
+describe('returning 503, 503, 503 with multifetch', function () {
+	this.timeout(6000);
+	var rrsResult;
+	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 503, msg: 'err'}, {statusCode: 503, msg: 'err'}], {multifetch: true}, done));
+	before(()=> rrsResult = result.body.rrs);
+
+	it('calls with success', ()=> {
+		delete rrsResult.headers.date;
+		expect(rrsResult).to.eql({
+			body: {
+				statusCode: 503,
+				url: 'http://localhost:4301/test',
+				attempts: 3,
+				delay: 500,
+				timeout: 2000,
+				json: true,
+				method: 'GET',
+				attemptsDone: 3,
+				body: 'err'
+			},
+			statusCode: 500,
+			headers: {
+				'content-type': 'application/json; charset=utf-8',
+				'content-length': '150',
+				connection: 'close'
+			}
+		});
+	});
+});
+
 describe('timeout then success with multifetch', function () {
 	this.timeout(6000);
 	var requestResult, rrsResult;
 	before(done => get([{timeout: true}, {statusCode: 200, msg: '"success"'}], {multifetch: true}, done));
-	before(()=> console.log(result));
 	before(()=> rrsResult = result.body.rrs);
 
-	before(done => get([{timeout: true}, {statusCode: 200, msg: '"success"'}], done));
+	before(done => get([{statusCode: 200, msg: '"success"'}], done));
 	before(()=> requestResult = result);
 
 	it('calls with success', ()=> {
