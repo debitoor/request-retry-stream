@@ -46,14 +46,13 @@ function verbFunc(verb) {
 		function makeRequest() {
 			attempts++;
 			var potentialStream = new ProxyStream();
-			var done = false;
+			var success = false;
 			var handler = once(function (err, resp) {
 				if (shouldRetry(err, resp) && attempts < maxAttempts) {
 					potentialStream.destroy(err || new Error('request-retry-stream is retrying this request'));
 					logFunction(err || 'request-retry-stream is retrying to perform request');
 					return setTimeout(makeRequest, attempts * delay);
 				}
-				done = true;
 				if (!err) {
 					Object.keys(resp.headers).forEach(function (key) {
 						stream.setHeader(key, resp.headers[key]);
@@ -68,6 +67,7 @@ function verbFunc(verb) {
 					return pump(potentialStream, concatStream, cb);
 				}
 				//all good
+				success = true;
 				return pump(potentialStream, stream);
 
 				function returnError(bodyBufferOrError) {
@@ -85,7 +85,7 @@ function verbFunc(verb) {
 			});
 			var req = request(params);
 			req.pipefilter = function (resp, proxy) {
-				if (done && destination && (destination.headersSent === undefined || !destination.headersSent)) {
+				if (success && destination && (destination.headersSent === undefined || !destination.headersSent)) {
 					for (var i in proxy._headers) {
 						destination.setHeader && destination.setHeader(i, proxy._headers[i]);
 					}
