@@ -44,6 +44,12 @@ app.get('/rrs', function (req, res, next) {
 		logFunction: console.warn // optional, if you want to be notified about retry
 	});
 	var ps = new ProxyStream();
+	stream.on('response', function onResponse(proxyRes) {
+		Object.keys(proxyRes.headers).forEach(function (headerName) {
+			res.setHeader(headerName.toLowerCase(), proxyRes.headers[headerName]);
+		});
+		res.statusCode = proxyRes.statusCode;
+	});
 	stream.pipefilter = function (response, proxy) {
 		for (var i in ps._headers) {
 			res.setHeader(i, ps._headers[i]);

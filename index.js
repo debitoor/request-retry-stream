@@ -85,7 +85,7 @@ function verbFunc(verb) {
 			});
 			var req = request(params);
 			req.pipefilter = function (resp, proxy) {
-				if (done && destination) {
+				if (done && destination && (destination.headersSent === undefined || !destination.headersSent)) {
 					for (var i in proxy._headers) {
 						destination.setHeader && destination.setHeader(i, proxy._headers[i]);
 					}
