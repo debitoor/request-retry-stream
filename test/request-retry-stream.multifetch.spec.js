@@ -3,6 +3,7 @@ var concat = require('concat-stream');
 var multifetch = require('multifetch');
 var request = require('request');
 var pump = require('pump');
+var ProxyStream = require('../ProxyStream');
 var app = express();
 var responses = [];
 var rrs = require('..');
@@ -39,7 +40,13 @@ app.get('/rrs', function (req, res, next) {
 		json: true,
 		logFunction: console.warn // optional, if you want to be notified about retry
 	});
-	pump(stream, res, next);
+	var ps = new ProxyStream();
+	stream.pipefilter = function (response, proxy) {
+		for (var i in proxy._headers) {
+			res.setHeader(i, proxy._headers[i]);
+		}
+	};
+	pump(stream, ps, res, next);
 });
 
 app.get('/request', function (req, res, next) {
@@ -126,6 +133,23 @@ describe('returning 503 then success with multifetch', function () {
 	before(()=> rrsResult = result.body.rrs);
 
 	before(done => get([{statusCode: 503, msg: 'err'}, {statusCode: 200, msg: '"success"'}], done));
+	before(()=> requestResult = result);
+
+	it('calls with success', ()=> {
+		delete rrsResult.headers.date;
+		delete requestResult.headers.date;
+		expect(rrsResult).to.eql(requestResult);
+	});
+});
+
+describe('timeout then success with multifetch', function () {
+	this.timeout(6000);
+	var requestResult, rrsResult;
+	before(done => get([{timeout: true}, {statusCode: 200, msg: '"success"'}], {multifetch: true}, done));
+	before(()=> console.log(result));
+	before(()=> rrsResult = result.body.rrs);
+
+	before(done => get([{timeout: true}, {statusCode: 200, msg: '"success"'}], done));
 	before(()=> requestResult = result);
 
 	it('calls with success', ()=> {
