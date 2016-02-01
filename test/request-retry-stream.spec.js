@@ -1,7 +1,5 @@
 var express = require('express');
 var concat = require('concat-stream');
-var multifetch = require('multifetch');
-var request = require('request');
 var pump = require('pump');
 var app = express();
 var responses = [];
@@ -17,7 +15,7 @@ app.get('/test', function (req, res, next) {
 		return null;
 	}
 	var buf = new Buffer(responseToSend.msg, 'utf-8');
-	res.writeHeader(responseToSend.statusCode, {'content-type': 'application/json', 'content-length':buf.length});
+	res.writeHeader(responseToSend.statusCode, {'content-type': 'application/json', 'content-length': buf.length});
 	return sendByte();
 
 	function sendByte() {
@@ -29,29 +27,6 @@ app.get('/test', function (req, res, next) {
 		process.nextTick(sendByte);
 	}
 });
-
-app.get('/rrs', function (req, res, next) {
-	var stream = rrs.get({
-		url: 'http://localhost:4300/test',
-		attempts: 3, //default
-		delay: 500, //default
-		timeout: 2000,
-		json: true,
-		logFunction: console.warn // optional, if you want to be notified about retry
-	});
-	pump(stream, res, next);
-});
-
-app.get('/request', function (req, res, next) {
-	var stream = request.get({
-		url: 'http://localhost:4300/test',
-		timeout: 2000
-	});
-	pump(stream, res, next);
-});
-
-app.get('/multifetch', multifetch());
-
 
 app.use(function (err, req, res, next) {
 	var e = Object.assign(err);
@@ -67,28 +42,15 @@ var server = app.listen(4300, function () {
 });
 
 var result;
-function get(r, optionalOptions, callback) {
-	if (typeof optionalOptions === 'function') {
-		callback = optionalOptions;
-		optionalOptions = {};
-	}
-	optionalOptions = optionalOptions || {};
+function get(r, callback) {
 	responses = r;
 	result = {};
 	var stream;
-	if (optionalOptions.multifetch) {
-		stream = request.get({
-			url: 'http://localhost:4300/multifetch?rrs=/rrs',
-			timeout: 500,
-			logFunction: console.warn
-		});
-	} else {
-		stream = rrs.get({
-			url: 'http://localhost:4300/test',
-			timeout: 500,
-			logFunction: console.warn
-		});
-	}
+	stream = rrs.get({
+		url: 'http://localhost:4300/test',
+		timeout: 500,
+		logFunction: console.warn
+	});
 	stream.on('response', function (resp) {
 		result.statusCode = resp.statusCode;
 		result.headers = resp.headers;
@@ -114,21 +76,6 @@ describe('returning success', function () {
 			statusCode: 200,
 			headers: {'content-type': 'application/json'}
 		});
-	});
-});
-
-describe('returning success with multifetch', function () {
-	var requestResult, rrsResult;
-	before(done => get([{statusCode: 200, msg: '"success"'}], {multifetch: true}, done));
-	before(()=> rrsResult = result.body.rrs);
-
-	before(done => get([{statusCode: 200, msg: '"success"'}], done));
-	before(()=> requestResult = result);
-
-	it('calls with success', ()=> {
-		delete rrsResult.headers.date;
-		delete requestResult.headers.date;
-		expect(rrsResult).to.eql(requestResult);
 	});
 });
 
