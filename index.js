@@ -53,13 +53,6 @@ function verbFunc(verb) {
 					logFunction(err || 'request-retry-stream is retrying to perform request');
 					return setTimeout(makeRequest, attempts * delay);
 				}
-				if (!err) {
-					Object.keys(resp.headers).forEach(function (key) {
-						stream.setHeader(key, resp.headers[key]);
-					});
-					stream.statusCode = resp.statusCode;
-					stream.emit('response', resp);
-				}
 				if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 					//unrecoverable error
 					var cb = once(returnError);
@@ -68,6 +61,11 @@ function verbFunc(verb) {
 				}
 				//all good
 				success = true;
+				Object.keys(resp.headers).forEach(function (key) {
+					stream.setHeader(key, resp.headers[key]);
+				});
+				stream.statusCode = resp.statusCode;
+				stream.emit('response', resp);
 				return pump(potentialStream, stream);
 
 				function returnError(bodyBufferOrError) {
@@ -85,7 +83,7 @@ function verbFunc(verb) {
 			});
 			var req = request(params);
 			req.pipefilter = function (resp, proxy) {
-				if (success && destination && (destination.headersSent === undefined || !destination.headersSent)) {
+				if (success && destination) {
 					for (var i in proxy._headers) {
 						destination.setHeader && destination.setHeader(i, proxy._headers[i]);
 					}

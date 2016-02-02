@@ -8,8 +8,9 @@ var app = express();
 var responses = [];
 var rrs = require('..');
 
-describe('multifetch', function () {
+describe('multifetch sync', function () {
 	before(function () {
+
 		app.disable('x-powered-by');
 		app.set('etag', false);
 		app.get('/test', function (req, res, next) {
@@ -20,28 +21,17 @@ describe('multifetch', function () {
 			if (responseToSend.timeout) {
 				return null;
 			}
-			var buf = new Buffer(responseToSend.msg, 'utf-8');
-			setTimeout(function () {
-				res.writeHeader(responseToSend.statusCode, {
-					'content-type': 'application/json',
-					'content-length': buf.length
-				});
-				return sendByte();
-
-				function sendByte() {
-					if (!buf.length) {
-						return res.end();
-					}
-					res.write(new Buffer([buf.readUInt8(0)]));
-					buf = buf.slice(1);
-					setTimeout(sendByte, 100);
-				}
-			}, 500);
+			res.writeHeader(responseToSend.statusCode, {
+				'content-type': 'application/json',
+				'content-length': responseToSend.msg.length
+			});
+			res.write(responseToSend.msg);
+			res.end();
 		});
 
 		app.get('/rrs', function (req, res, next) {
 			var stream = rrs.get({
-				url: 'http://localhost:4301/test',
+				url: 'http://localhost:4302/test',
 				attempts: 3, //default
 				delay: 500, //default
 				timeout: 2000,
@@ -65,7 +55,7 @@ describe('multifetch', function () {
 
 		app.get('/request', function (req, res, next) {
 			var stream = request.get({
-				url: 'http://localhost:4301/test',
+				url: 'http://localhost:4302/test',
 				timeout: 2000
 			});
 			pump(stream, res, next);
@@ -81,12 +71,13 @@ describe('multifetch', function () {
 			res.json(e);
 		});
 
-		var server = app.listen(4301, function () {
+		var server = app.listen(4302, function () {
 			var host = server.address().address;
 			var port = server.address().port;
 			console.log('Example app listening at http://%s:%s', host, port);
 		});
 	});
+
 	var result;
 
 	function get(r, optionalOptions, callback) {
@@ -100,12 +91,12 @@ describe('multifetch', function () {
 		var stream;
 		if (optionalOptions.multifetch) {
 			stream = request.get({
-				url: 'http://localhost:4301/multifetch?rrs=/rrs',
+				url: 'http://localhost:4302/multifetch?rrs=/rrs',
 				timeout: 5000
 			});
 		} else {
 			stream = request.get({
-				url: 'http://localhost:4301/test',
+				url: 'http://localhost:4302/test',
 				timeout: 5000,
 				logFunction: console.warn
 			});
@@ -136,9 +127,7 @@ describe('multifetch', function () {
 
 		it('calls with success', ()=> {
 			delete rrsResult.headers.date;
-			delete rrsResult.headers.connection;
 			delete requestResult.headers.date;
-			delete requestResult.headers.connection;
 			expect(rrsResult).to.eql(requestResult);
 		});
 	});
@@ -157,9 +146,7 @@ describe('multifetch', function () {
 
 		it('calls with success', ()=> {
 			delete rrsResult.headers.date;
-			delete rrsResult.headers.connection;
 			delete requestResult.headers.date;
-			delete requestResult.headers.connection;
 			expect(rrsResult).to.eql(requestResult);
 		});
 	});
@@ -178,7 +165,7 @@ describe('multifetch', function () {
 			expect(rrsResult).to.eql({
 				body: {
 					statusCode: 503,
-					url: 'http://localhost:4301/test',
+					url: 'http://localhost:4302/test',
 					attempts: 3,
 					delay: 500,
 					timeout: 2000,
@@ -207,9 +194,7 @@ describe('multifetch', function () {
 
 		it('calls with success', ()=> {
 			delete rrsResult.headers.date;
-			delete rrsResult.headers.connection;
 			delete requestResult.headers.date;
-			delete requestResult.headers.connection;
 			expect(rrsResult).to.eql(requestResult);
 		});
 	});
