@@ -12,6 +12,8 @@ module.exports.post = verbFunc('post');
 module.exports.put = verbFunc('put');
 module.exports.patch = verbFunc('patch');
 module.exports.del = verbFunc('del');
+function noop() {
+}
 
 function verbFunc(verb) {
 	return function () {
@@ -21,19 +23,16 @@ function verbFunc(verb) {
 		}
 		var maxAttempts = params.attempts || 3;
 		var delay = params.delay || 500;
-		var logFunction = params.logFunction || function () {
-			};
+		var logFunction = params.logFunction || noop;
 		var attempts = 0;
 		var stream = new ProxyStream();
-		if (params.callback) {
-			throw new Error('request-retry-stream does not support callbacks only streaming. PRs are welcome if you want to add support for callbacks');
-		}
 		if (!params.timeout) {
 			throw new Error('request-retry-stream you have to specify a timeout');
 		}
 		if (params.method !== 'GET') {
 			throw new Error('request-retry-stream only supports GETs for now. PRs are welcome if you want to add support for other verbs');
 		}
+		var callback = params.callback;
 		makeRequest();
 		var originalPipe = stream.pipe;
 		var destination = null;
@@ -47,14 +46,19 @@ function verbFunc(verb) {
 			attempts++;
 			var potentialStream = new ProxyStream();
 			var success = false;
+			var done = false;
 			var handler = once(function (err, resp) {
 				if (shouldRetry(err, resp) && attempts < maxAttempts) {
 					potentialStream.destroy(err || new Error('request-retry-stream is retrying this request'));
 					logFunction(err || 'request-retry-stream is retrying to perform request');
 					return setTimeout(makeRequest, attempts * delay);
 				}
+				done = true;
 				if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 					//unrecoverable error
+					if (callback) {
+						return;
+					}
 					var cb = once(returnError);
 					var concatStream = concat(cb);
 					return pump(potentialStream, concatStream, cb);
@@ -81,7 +85,30 @@ function verbFunc(verb) {
 					stream.destroy(err);
 				}
 			});
-			var req = request(params);
+			if (callback) {
+				params.callback = function (err, resp) {
+					if (done) {
+						if (err || !/2\d\d/.test(resp && resp.statusCode)) {
+							//unrecoverable error
+							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
+							err.statusCode = (resp && resp.statusCode);
+							Object.assign(err, params);
+							err.attemptsDone = attempts;
+							err.body = resp && resp.body;
+							return callback(err);
+						}
+						callback.apply(this, arguments);
+					}
+				}
+			}
+			var req = request(params, params.callback);
+
+			req.on('response', function (resp) {
+				handler(null, resp);
+			});
+
+			req.on('error', handler);
+
 			req.pipefilter = function (resp, proxy) {
 				if (success && destination) {
 					for (var i in proxy._headers) {
@@ -92,10 +119,7 @@ function verbFunc(verb) {
 					}
 				}
 			};
-			req.on('response', function (resp) {
-				handler(null, resp);
-			});
-			req.on('error', handler);
+
 			return pump(req, potentialStream);
 		}
 	};
