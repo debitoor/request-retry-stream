@@ -111,11 +111,19 @@ function verbFunc(verb) {
 
 			req.pipefilter = function (resp, proxy) {
 				if (success && destination) {
-					for (var i in proxy._headers) {
-						destination.setHeader && destination.setHeader(i, proxy._headers[i]);
+					try {
+						for (var i in proxy._headers) {
+							destination.setHeader && destination.setHeader(i, proxy._headers[i]);
+						}
+					} catch (ex) {
+						logFunction(ex);
 					}
 					if (stream.pipefilter) {
-						stream.pipefilter(resp, destination);
+						try {
+							stream.pipefilter(resp, destination);
+						} catch (ex) {
+							logFunction(ex);
+						}
 					}
 				}
 			};
