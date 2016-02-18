@@ -15,6 +15,7 @@ module.exports.del = verbFunc('del');
 function noop() {
 }
 
+var supportedMethods = ['POST', 'GET'];
 function verbFunc(verb) {
 	return function () {
 		var params = request.initParams.apply(request, arguments);
@@ -29,8 +30,8 @@ function verbFunc(verb) {
 		if (!params.timeout) {
 			throw new Error('request-retry-stream you have to specify a timeout');
 		}
-		if (params.method !== 'GET') {
-			throw new Error('request-retry-stream only supports GETs for now. PRs are welcome if you want to add support for other verbs');
+		if (supportedMethods.indexOf(params.method) === -1) {
+			throw new Error(`request-retry-stream only supports ${supportedMethods.join(', ')} for now. PRs are welcome if you want to add support for other verbs`);
 		}
 		var callback = params.callback;
 		makeRequest();
@@ -90,8 +91,9 @@ function verbFunc(verb) {
 					if (done) {
 						if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 							//unrecoverable error
-							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
+							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCodex: ' + (resp && resp.statusCode)));
 							err.statusCode = (resp && resp.statusCode);
+							//console.log(err, params);
 							Object.assign(err, params);
 							err.attemptsDone = attempts;
 							err.body = resp && resp.body;

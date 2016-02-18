@@ -3,7 +3,11 @@
 [![npm version](https://badge.fury.io/js/request-retry-stream.svg)](https://badge.fury.io/js/request-retry-stream) [![Build Status](https://travis-ci.org/debitoor/request-retry-stream.svg?branch=master)](https://travis-ci.org/debitoor/request-retry-stream) [![Dependency Status](https://david-dm.org/debitoor/request-retry-stream.svg)](https://david-dm.org/debitoor/request-retry-stream) [![devDependency Status](https://david-dm.org/debitoor/request-retry-stream/dev-status.svg)](https://david-dm.org/debitoor/request-retry-stream#info=devDependencies) [![Coverage Status](https://coveralls.io/repos/github/debitoor/request-retry-stream/badge.svg?branch=master)](https://coveralls.io/github/debitoor/request-retry-stream?branch=master)
 
 
-Request wrapper with retries, supports streaming. 
+Request wrapper with retries, supports streaming.
+
+NOTE: only GET http requests are supported
+
+There is experimental support for POST retrying using callbacks but not streaming (be careful with retrying POST, it's not idempotent)
 
 Non-2XX http statusCodes are returned as errors with
 the information needed for debugging.
