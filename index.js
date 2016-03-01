@@ -15,7 +15,7 @@ module.exports.del = verbFunc('del');
 function noop() {
 }
 
-var supportedMethods = ['POST', 'GET'];
+var supportedMethods = ['POST', 'PUT', 'PATCH', 'GET'];
 function verbFunc(verb) {
 	return function () {
 		var params = request.initParams.apply(request, arguments);

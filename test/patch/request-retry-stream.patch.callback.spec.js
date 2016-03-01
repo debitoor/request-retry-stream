@@ -5,11 +5,12 @@ var app = express();
 var responses = [];
 var rrs = require('../..');
 
-//** This doesn't work yet  WORK IN PROGRESS **//
-describe.skip('request-retry-stream POST stream', function () {
+describe('request-retry-stream PATCH callbacks', function () {
 	before(function () {
+
+
 		app.disable('x-powered-by');
-		app.post('/test', function (req, res, next) {
+		app.patch('/test', function (req, res, next) {
 			if (!responses.length) {
 				throw new Error('no responses specified for test');
 			}
@@ -41,14 +42,13 @@ describe.skip('request-retry-stream POST stream', function () {
 		});
 
 		app.use(function (err, req, res, next) {
-			console.log(err.stack);
 			var e = Object.assign(err);
 			e.stack = err.stack;
 			res.statusCode = 500;
 			res.json(e);
 		});
 
-		var server = app.listen(4306, function () {
+		var server = app.listen(4307, function () {
 			var host = server.address().address;
 			var port = server.address().port;
 			console.log('Example app listening at http://%s:%s', host, port);
@@ -57,49 +57,26 @@ describe.skip('request-retry-stream POST stream', function () {
 
 	var result;
 
-	function post(msg, r, callback) {
+	function patch(msg, r, callback) {
 		responses = r;
 		result = {};
-		var stream = rrs.post({
-			url: 'http://localhost:4306/test',
+		rrs.patch({
+			url: 'http://localhost:4307/test',
 			timeout: 500,
 			json: true,
+			body: msg,
 			logFunction: console.warn
+		}, function (err, resp) {
+			result.statusCode = resp && resp.statusCode;
+			result.headers = resp && resp.headers;
+			result.body = resp && resp.body;
+			result.err = err;
+			callback();
 		});
-		stream.on('response', function (resp) {
-			result.statusCode = resp.statusCode;
-			result.headers = resp.headers;
-		});
-		var concatStream = concat(function (body) {
-			result.body = body.toString();
-		});
-		pump(stream, concatStream, function (err) {
-			if (err) {
-				result.err = Object.assign({stack: err.stack}, err);
-			}
-			callback && callback();
-		});
-		sendRequest();
-		return {req: stream, dest: concatStream};
-
-		function sendRequest() {
-			var buf = new Buffer(msg, 'utf-8');
-			return sendByte();
-
-			function sendByte() {
-				if (!buf.length) {
-					return stream.end();
-				}
-				stream.write(new Buffer([buf.readUInt8(0)]));
-				buf = buf.slice(1);
-				process.nextTick(sendByte);
-			}
-		}
-
 	}
 
 	describe('returning success', function () {
-		before(done => post('success', [{statusCode: 200}], done));
+		before(done => patch('success', [{statusCode: 200}], done));
 
 		it('calls with success', ()=> {
 			expect(result).to.containSubset({
@@ -111,7 +88,7 @@ describe.skip('request-retry-stream POST stream', function () {
 	});
 
 	describe('returning 503 and then success', function () {
-		before(done => post('success', [{statusCode: 503}, {statusCode: 200}], done));
+		before(done => patch('success', [{statusCode: 503}, {statusCode: 200}], done));
 
 		it('calls with success', ()=> {
 			expect(result).to.containSubset({body: 'success', 'statusCode': 200});
@@ -119,7 +96,7 @@ describe.skip('request-retry-stream POST stream', function () {
 	});
 
 	describe('returning 503, 503 and then success', function () {
-		before(done => post('success', [{statusCode: 503}, {statusCode: 503}, {statusCode: 200}], done));
+		before(done => patch('success', [{statusCode: 503}, {statusCode: 503}, {statusCode: 200}], done));
 
 		it('calls with success', ()=> {
 			expect(result).to.containSubset({body: 'success', 'statusCode': 200});
@@ -127,55 +104,55 @@ describe.skip('request-retry-stream POST stream', function () {
 	});
 
 	describe('returning 503, 503 and 503', function () {
-		before(done => post('err', [{statusCode: 503}, {statusCode: 503}, {statusCode: 503}], done));
+		before(done => patch('err', [{statusCode: 503}, {statusCode: 503}, {statusCode: 503}], done));
 
 		it('calls with err', ()=> {
 			expect(result).to.containSubset({
 				err: {
 					attemptsDone: 3,
 					body: 'err',
-					method: 'POST',
+					method: 'PATCH',
 					statusCode: 503,
-					url: 'http://localhost:4306/test'
+					url: 'http://localhost:4307/test'
 				}
 			});
 		});
 	});
 
 	describe('returning 400', function () {
-		before(done => post('err', [{statusCode: 400}], done));
+		before(done => patch('err', [{statusCode: 400}], done));
 
 		it('calls with err', ()=> {
 			expect(result).to.containSubset({
 				err: {
 					attemptsDone: 1,
 					body: 'err',
-					method: 'POST',
+					method: 'PATCH',
 					statusCode: 400,
-					url: 'http://localhost:4306/test'
+					url: 'http://localhost:4307/test'
 				}
 			});
 		});
 	});
 
 	describe('returning 503 then 400', function () {
-		before(done => post('err', [{statusCode: 503}, {statusCode: 400}], done));
+		before(done => patch('err', [{statusCode: 503}, {statusCode: 400}], done));
 
 		it('calls with err', ()=> {
 			expect(result).to.containSubset({
 				err: {
 					attemptsDone: 2,
 					body: 'err',
-					method: 'POST',
+					method: 'PATCH',
 					statusCode: 400,
-					url: 'http://localhost:4306/test'
+					url: 'http://localhost:4307/test'
 				}
 			});
 		});
 	});
 
 	describe('timing out then 200', function () {
-		before(done => post('success', [{timeout: true}, {statusCode: 200}], done));
+		before(done => patch('success', [{timeout: true}, {statusCode: 200}], done));
 
 		it('calls with success', ()=> {
 			expect(result).to.containSubset({body: 'success', 'statusCode': 200});
