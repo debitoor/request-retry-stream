@@ -71,6 +71,7 @@ function verbFunc(verb) {
 				});
 				stream.statusCode = resp.statusCode;
 				stream.emit('response', resp);
+				stream.on('data', noop);
 				return pump(potentialStream, stream);
 
 				function returnError(bodyBufferOrError) {
