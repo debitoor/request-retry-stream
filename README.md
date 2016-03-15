@@ -7,7 +7,7 @@ Request wrapper with retries, supports streaming.
 
 NOTE: only GET http requests are supported
 
-There is experimental support for POST, PUT and PATCH retrying using callbacks but not streaming 
+There is support for POST, PUT and PATCH retrying using callbacks but not streaming 
 (be careful with retrying these, they are not idempotent)
 
 Non-2XX http statusCodes are returned as errors with
