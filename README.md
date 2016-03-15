@@ -20,7 +20,7 @@ the information needed for debugging.
 
 ```javascript
 var rrs = require('request-retry-stream');
-rrs.get({url:'http://google.com', timeout: 5000}, function(err, resp){
+rrs.get({url: 'http://google.com', timeout: 5000}, function(err, resp){
 	// handle err and resp. Any response that does not have http status code 2XX is an error here
 });
 
