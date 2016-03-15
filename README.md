@@ -25,6 +25,23 @@ rrs.get('http://google.com', function(err, resp){
 
 ```
 
+## Example of error returned
+
+The error returned in case of non 2XX, has all the options passed to rrs, 
+as well as a `statusCode`, `message`, `stack`, `attemptsDone` and the `body` returned 
+for the request.
+
+```js
+{
+    message: 'Error in request 400',
+    statusCode: 400,
+    url: 'http://example.com',
+    attemptsDone: 1,
+    method: 'POST'
+    body: '...[BODY RETURNED FROM REQUEST]...'
+}
+```
+
 ## Simple stream usage in express middleware with pump
 
 ```javascript
