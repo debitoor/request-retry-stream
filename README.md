@@ -35,7 +35,7 @@ for the request.
 ```js
 {
     message: 'Error in request 400',
-    stack: '...[]STACKTRACE]...',
+    stack: '...[STACKTRACE]...',
     statusCode: 400,
     url: 'http://example.com',
     attemptsDone: 1,
