@@ -92,9 +92,8 @@ function verbFunc(verb) {
 					if (done) {
 						if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 							//unrecoverable error
-							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCodex: ' + (resp && resp.statusCode)));
+							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
 							err.statusCode = (resp && resp.statusCode);
-							//console.log(err, params);
 							Object.assign(err, params);
 							err.attemptsDone = attempts;
 							err.body = resp && resp.body;
