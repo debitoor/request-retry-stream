@@ -8,8 +8,8 @@ Request wrapper with retries, supports streaming. Takes the same options as the
 
 NOTE: only GET http requests are supported when streaming.
 
-There is support for POST, PUT and PATCH retrying using callbacks but not streaming 
-(be careful with retrying these, they are not idempotent)
+There is support for POST, PUT, DELETE and PATCH retrying using callbacks but not streaming
+(be careful with retrying POST it's not idempotent)
 
 Non-2XX http statusCodes are returned as errors with
 the information needed for debugging.
