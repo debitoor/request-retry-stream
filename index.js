@@ -55,7 +55,7 @@ function verbFunc(verb) {
 					return setTimeout(makeRequest, attempts * delay);
 				}
 				done = true;
-				if (err || !/2\d\d/.test(resp && resp.statusCode)) {
+				if (err || (!params.passThrough && !/2\d\d/.test(resp && resp.statusCode))) {
 					//unrecoverable error
 					if (callback) {
 						return;
