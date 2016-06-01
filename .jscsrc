@@ -1,6 +1,5 @@
 {
   "disallowEmptyBlocks": true,
-  "esnext": true,
   "validateIndentation": "\t",
   "excludeFiles": [
     "node_modules", "coverage"
