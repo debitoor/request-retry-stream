@@ -5,7 +5,7 @@ var app = express();
 var responses = [];
 var rrs = require('../..');
 
-describe('request-retry-stream GET basics with passThrough:true', function () {
+describe('request-retry-stream GET stream with passThrough:true', function () {
 	before(function () {
 
 
