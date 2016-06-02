@@ -1,6 +1,6 @@
 {
   "name": "request-retry-stream",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Request wrapper with retries, focused on streaming",
   "main": "index.js",
   "scripts": {
@@ -33,5 +33,9 @@
     "once": "^1.3.3",
     "pump": "^1.0.1",
     "request": "^2.72.0"
-  }
+  },
+  "files": [
+    "index.js",
+    "ProxyStream.js"
+  ]
 }
