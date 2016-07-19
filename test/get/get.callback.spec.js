@@ -155,4 +155,16 @@ describe('request-retry-stream GET callbacks', function () {
 			expect(result).to.containSubset({body: 'success', 'statusCode': 200});
 		});
 	});
+
+	describe('just timing out', function () {
+		before(done => get([{timeout: true}], done));
+
+		it('should return error', ()=> {
+			expect(result).to.containSubset({
+				err: {
+					code: 'ETIMEDOUT'
+				}
+			});
+		});
+	});
 });
