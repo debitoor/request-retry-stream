@@ -47,14 +47,12 @@ function verbFunc(verb) {
 			attempts++;
 			var potentialStream = new ProxyStream();
 			var success = false;
-			var done = false;
 			var handler = once(function (err, resp) {
 				if (shouldRetry(err, resp) && attempts < maxAttempts) {
 					potentialStream.destroy(err || new Error('request-retry-stream is retrying this request'));
 					logFunction(err || 'request-retry-stream is retrying to perform request');
 					return setTimeout(makeRequest, attempts * delay);
 				}
-				done = true;
 				if (err || (!params.passThrough && !/2\d\d/.test(resp && resp.statusCode))) {
 					//unrecoverable error
 					if (callback) {
@@ -89,7 +87,7 @@ function verbFunc(verb) {
 			});
 			if (callback) {
 				params.callback = function (err, resp) {
-					if (done) {
+					if (attempts >= maxAttempts || !shouldRetry(err, resp)) {
 						if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 							//unrecoverable error
 							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
@@ -103,7 +101,7 @@ function verbFunc(verb) {
 					}
 				}
 			}
-			var req = request(params, params.callback);
+			var req = request(params);
 
 			req.on('response', function (resp) {
 				handler(null, resp);
