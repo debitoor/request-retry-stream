@@ -145,7 +145,7 @@ const RETRIABLE_ERRORS = [
 ];
 function shouldRetry(err, resp) {
 	if (err) {
-		return RETRIABLE_ERRORS.indexOf(err.code) !== -1;;
+		return RETRIABLE_ERRORS.indexOf(err.code) !== -1;
 	}
 	return resp && /5\d\d/.test(resp.statusCode);
 }
