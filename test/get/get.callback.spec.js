@@ -151,15 +151,15 @@ describe('request-retry-stream GET callbacks', function () {
 	describe('timing out then 200', function () {
 		before(done => get([{timeout: true}, {statusCode: 200, msg: '"success"'}], done));
 
-		it('calls with success', ()=> {
+		it('calls with success', () => {
 			expect(result).to.containSubset({body: 'success', 'statusCode': 200});
 		});
 	});
 
 	describe('just timing out', function () {
-		before(done => get([{timeout: true}], done));
+		before(done => get([{timeout: true}, {timeout: true}, {timeout: true}, {timeout: true}], done));
 
-		it('should return error', ()=> {
+		it('should return error', () => {
 			expect(result).to.containSubset({
 				err: {
 					code: 'ETIMEDOUT'
