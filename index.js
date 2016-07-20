@@ -87,7 +87,7 @@ function verbFunc(verb) {
 			});
 			if (callback) {
 				params.callback = function (err, resp) {
-					if (attempts >= maxAttempts || (err && !isRetryableError(err) ) ) {
+					if (attempts >= maxAttempts || !shouldRetry(err, resp) ) {
 						if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 							//unrecoverable error
 							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
@@ -143,12 +143,9 @@ const RETRIABLE_ERRORS = [
 	'EPIPE',
 	'EAI_AGAIN'
 ];
-function isRetryableError(err) {
-	return RETRIABLE_ERRORS.indexOf(err.code) !== -1;
-}
 function shouldRetry(err, resp) {
 	if (err) {
-		return isRetryableError(err);
+		return RETRIABLE_ERRORS.indexOf(err.code) !== -1;;
 	}
 	return resp && /5\d\d/.test(resp.statusCode);
 }
