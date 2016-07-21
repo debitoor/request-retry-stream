@@ -12,6 +12,18 @@ module.exports.post = verbFunc('post');
 module.exports.put = verbFunc('put');
 module.exports.patch = verbFunc('patch');
 module.exports.del = verbFunc('del');
+
+const RETRIABLE_ERRORS = [
+	'ECONNRESET',
+	'ENOTFOUND',
+	'ESOCKETTIMEDOUT',
+	'ETIMEDOUT',
+	'ECONNREFUSED',
+	'EHOSTUNREACH',
+	'EPIPE',
+	'EAI_AGAIN'
+];
+
 function noop() {
 }
 
@@ -48,7 +60,7 @@ function verbFunc(verb) {
 			var potentialStream = new ProxyStream();
 			var success = false;
 			var handler = once(function (err, resp) {
-				if (shouldRetry(err, resp) && attempts < maxAttempts) {
+				if (shouldRetry(err, resp, attempts)) {
 					potentialStream.destroy(err || new Error('request-retry-stream is retrying this request'));
 					logFunction(err || 'request-retry-stream is retrying to perform request');
 					return setTimeout(makeRequest, attempts * delay);
@@ -87,7 +99,7 @@ function verbFunc(verb) {
 			});
 			if (callback) {
 				params.callback = function (err, resp) {
-					if (attempts >= maxAttempts || !shouldRetry(err, resp) ) {
+					if (!shouldRetry(err, resp, attempts)) {
 						if (err || !/2\d\d/.test(resp && resp.statusCode)) {
 							//unrecoverable error
 							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
@@ -130,22 +142,15 @@ function verbFunc(verb) {
 
 			return pump(req, potentialStream);
 		}
-	};
-}
 
-const RETRIABLE_ERRORS = [
-	'ECONNRESET',
-	'ENOTFOUND',
-	'ESOCKETTIMEDOUT',
-	'ETIMEDOUT',
-	'ECONNREFUSED',
-	'EHOSTUNREACH',
-	'EPIPE',
-	'EAI_AGAIN'
-];
-function shouldRetry(err, resp) {
-	if (err) {
-		return RETRIABLE_ERRORS.indexOf(err.code) !== -1;
-	}
-	return resp && /5\d\d/.test(resp.statusCode);
+		function shouldRetry(err, resp, attempts) {
+			var retryableError = false;
+			if (err) {
+				retryableError = RETRIABLE_ERRORS.indexOf(err.code) !== -1;
+			} else {
+				retryableError = resp && /5\d\d/.test(resp.statusCode);
+			}
+			return attempts < maxAttempts && retryableError;
+		}
+	};
 }
