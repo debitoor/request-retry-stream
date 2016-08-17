@@ -1,6 +1,6 @@
 {
   "name": "request-retry-stream",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "description": "Request wrapper with retries, focused on streaming",
   "main": "index.js",
   "scripts": {
