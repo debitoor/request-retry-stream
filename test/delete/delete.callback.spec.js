@@ -61,7 +61,7 @@ describe('request-retry-stream DELETE callbacks', function () {
 		result = {};
 		rrs.del({
 			url: 'http://localhost:4320/test',
-			timeout: 500,
+			timeout: 1500,
 			json: true,
 			body: msg,
 			logFunction: console.warn

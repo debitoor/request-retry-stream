@@ -38,7 +38,6 @@ function verbFunc(verb) {
 		var delay = params.delay || 500;
 		var logFunction = params.logFunction || noop;
 		var attempts = 0;
-		var stream = new ProxyStream();
 		if (!params.timeout) {
 			throw new Error('request-retry-stream you have to specify a timeout');
 		}
@@ -46,7 +45,30 @@ function verbFunc(verb) {
 			throw new Error(`request-retry-stream only supports ${supportedMethods.join(', ')} for now. PRs are welcome if you want to add support for other verbs`);
 		}
 		var callback = params.callback;
-		makeRequest();
+		if(callback){
+			params.callback = function (err, resp) {
+				if (!shouldRetry(err, resp, attempts)) {
+					if (err || !/2\d\d/.test(resp && resp.statusCode)) {
+						//unrecoverable error
+						err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
+						err.statusCode = (resp && resp.statusCode);
+						Object.assign(err, params);
+						err.attemptsDone = attempts;
+						err.body = resp && resp.body;
+						return callback(err);
+					}
+					callback.apply(this, arguments);
+				} else {
+					attempts++;
+					return request(params, params.callback);
+				}
+			};
+			attempts++;
+			return request(params, params.callback);
+		}
+		//no callback, streaming
+		var stream = new ProxyStream();
+		makeStreamingRequest();
 		var originalPipe = stream.pipe;
 		var destination = null;
 		stream.pipe = function (dest) {
@@ -55,7 +77,7 @@ function verbFunc(verb) {
 		};
 		return stream;
 
-		function makeRequest() {
+		function makeStreamingRequest() {
 			attempts++;
 			var potentialStream = new ProxyStream();
 			var success = false;
@@ -63,7 +85,7 @@ function verbFunc(verb) {
 				if (shouldRetry(err, resp, attempts)) {
 					potentialStream.destroy(err || new Error('request-retry-stream is retrying this request'));
 					logFunction(err || 'request-retry-stream is retrying to perform request');
-					return setTimeout(makeRequest, attempts * delay);
+					return setTimeout(makeStreamingRequest, attempts * delay);
 				}
 				if (err || (!params.passThrough && !/2\d\d/.test(resp && resp.statusCode))) {
 					//unrecoverable error
@@ -97,22 +119,7 @@ function verbFunc(verb) {
 					stream.destroy(err);
 				}
 			});
-			if (callback) {
-				params.callback = function (err, resp) {
-					if (!shouldRetry(err, resp, attempts)) {
-						if (err || !/2\d\d/.test(resp && resp.statusCode)) {
-							//unrecoverable error
-							err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
-							err.statusCode = (resp && resp.statusCode);
-							Object.assign(err, params);
-							err.attemptsDone = attempts;
-							err.body = resp && resp.body;
-							return callback(err);
-						}
-						callback.apply(this, arguments);
-					}
-				}
-			}
+
 			var req = request(params);
 
 			req.on('response', function (resp) {
