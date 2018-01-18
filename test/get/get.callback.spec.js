@@ -160,6 +160,7 @@ describe('request-retry-stream GET callbacks', function () {
 		before(done => get([{timeout: true}, {timeout: true}, {timeout: true}, {timeout: true}], done));
 
 		it('should return error', () => {
+			console.log('result', JSON.stringify(result, null, '  '));
 			expect(result).to.containSubset({
 				err: {
 					code: 'ETIMEDOUT'
