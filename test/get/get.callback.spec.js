@@ -162,7 +162,7 @@ describe('request-retry-stream GET callbacks', function () {
 		it('should return error', () => {
 			expect(result).to.containSubset({
 				err: {
-					code: 'ETIMEDOUT'
+					code: c => c === 'ETIMEDOUT' || c === 'ESOCKETTIMEDOUT'
 				}
 			});
 		});

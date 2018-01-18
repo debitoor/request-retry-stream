@@ -53,6 +53,7 @@ function verbFunc(verb) {
 						err = err || new Error('Error in request ' + ((err && err.message) || 'statusCode: ' + (resp && resp.statusCode)));
 						err.statusCode = (resp && resp.statusCode);
 						Object.assign(err, params);
+						err.requestBody = params.body;
 						err.attemptsDone = attempts;
 						err.body = resp && resp.body;
 						return callback(err);
@@ -110,6 +111,7 @@ function verbFunc(verb) {
 					err = err || new Error('Error in request ' + ((err && err.message) || (resp && resp.statusCode)));
 					err.statusCode = (resp && resp.statusCode);
 					Object.assign(err, params);
+					err.requestBody = params.body;
 					err.attemptsDone = attempts;
 					if (util.isError(bodyBufferOrError)) {
 						err.streamError = bodyBufferOrError;
