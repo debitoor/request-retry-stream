@@ -61,7 +61,9 @@ function verbFunc(verb) {
 					callback.apply(this, arguments);
 				} else {
 					attempts++;
-					return request(params, params.callback);
+					return setTimeout(() => {
+						request(params, params.callback);
+					}, attempts * delay);
 				}
 			};
 			attempts++;
