@@ -61,6 +61,7 @@ function verbFunc(verb) {
 					callback.apply(this, arguments);
 				} else {
 					attempts++;
+					logFunction(err || 'request-retry-stream is retrying to perform request');
 					return setTimeout(() => {
 						request(params, params.callback);
 					}, attempts * delay);
