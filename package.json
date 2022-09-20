@@ -1,6 +1,6 @@
 {
   "name": "request-retry-stream",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Request wrapper with retries, focused on streaming",
   "main": "index.js",
   "scripts": {
@@ -32,7 +32,7 @@
     "concat-stream": "1.5.2",
     "once": "1.3.3",
     "pump": "1.0.3",
-    "request": "2.83.0"
+    "request": "2.88.2"
   },
   "files": [
     "index.js",
